@@ -120,81 +120,112 @@ window.addEventListener('DOMContentLoaded', function() {
         failure: 'Что-то пошло не так...'
     };
 
-    let form = document.querySelector('.main-form'),
-        input = form.getElementsByTagName('input'),
-        formBottom = document.querySelector('#form'),
-        inputsFormBottom = formBottom.getElementsByTagName('input'),
+    let form = document.getElementsByClassName('main-form')[0],
+        formBottom = document.getElementById('form'),
+        input = document.getElementsByTagName('input'),
         statusMessage = document.createElement('div'); // Создаем новый div
-
         statusMessage.classList.add('status');
 
-    form.addEventListener('submit', function(event) {
-        event.preventDefault(); // отменяем стандартное поведение браузера
-        form.appendChild(statusMessage); // добавляем элемент statusMessage в форму
+    function sendForm(elem) {
+        elem.addEventListener('submit', function(e) {
+            e.preventDefault(); // отменяем стандартное поведение браузера
+            elem.appendChild(statusMessage); // добавляем элемент statusMessage в форму
 
-        let request = new XMLHttpRequest();
-        request.open('POST', 'server.php');
-        // request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); // это говорит серверу о том, что наши данные которые мы отправляем на сервер получены из формы
-        request.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-
-        let formData = new FormData(form);
-
-        let obj = {};
-        formData.forEach(function(value, key) { //превращаем наш объект formData в обычный объект
-            obj[key] = value;
-        });
-
-        let json = JSON.stringify(obj);
-
-        // request.send(formData);
-        request.send(json);
-
-        request.addEventListener('readystatechange', function() { // наблюдение состояния нашего запроса
-            if (request.readyState <4) {
-                statusMessage.innerHTML = message.loading;
-            } else if(request.readyState === 4 && request.status == 200) {
-                statusMessage.innerHTML = message.success;
-            } else {
-                statusMessage.innerHTML = message.failure;
+            let formData = new FormData(elem);
+    
+            function postData(data) {
+                return new Promise (function(resolve, reject) {
+                    let request = new XMLHttpRequest();
+    
+                    request.open('POST', 'server.php');
+                    request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+                
+                    request.onreadystatechange = function () {
+                        if (request.readyState < 4) {
+                            resolve();
+                        } else if (request.readyState === 4) {
+                            if (request.status == 200 && request.status < 300) {
+                                resolve();
+                            }
+                            else {
+                                reject();
+                            }
+                        }
+                    };
+    
+                    request.send(data);
+                });
+            } // End postData
+    
+            function clearInput() {
+                for (let i = 0; i < input.length; i++) {
+                    input[i].value = '';
+                }
             }
-        }); 
+            
+            postData(formData)
+                .then(()=> statusMessage.innerHTML = message.loading)
+                .then(()=> statusMessage.innerHTML = message.success)
+                .catch(()=> statusMessage.innerHTML = message.failure)
+                .then(clearInput);
+        });
+    }
+    
+    sendForm(form);
+    sendForm(formBottom);
 
-        for (let i = 0; i < input.length; i++) {
-            input[i].value = '';
+    // Slider
+
+    let slideIndex = 1,
+        slides = document.querySelectorAll('.slider-item'),
+        prev = document.querySelector('.prev'),
+        next = document.querySelector('.next'),
+        dotsWrap = document.querySelector('.slider-dots'),
+        dots = document.querySelectorAll('.dot');
+
+    showSlides(slideIndex);
+
+    function showSlides(n) {
+
+        if (n > slides.length) {
+            slideIndex = 1;
         }
+        if (n < 1) {
+            slideIndex = slides.length;
+        }
+
+        slides.forEach((item) => item.style.display = 'none');
+        // for (let i = 0; i < slides.length; i++) {
+        //     slides[i].style.display = 'none';
+        // }
+
+        dots.forEach((item) => item.classList.remove('dot-active'));
+
+        slides[slideIndex - 1].style.display = 'block';
+        dots[slideIndex - 1].classList.add('dot-active');
+    }
+
+    function plusSlides(n) {
+        showSlides(slideIndex += n);
+    }
+
+    function currentSlide(n) {
+        showSlides(slideIndex = n);
+    }
+
+    prev.addEventListener('click', function() {
+        plusSlides(-1);
     });
 
-    formBottom.addEventListener('submit', function(event) {
-        event.preventDefault();
-        formBottom.appendChild(statusMessage);
+    next.addEventListener('click', function() {
+        plusSlides(1);
+    });
 
-        let request = new XMLHttpRequest();
-        request.open('POST', 'server.php');
-        request.setRequestHeader('Content-type', 'application/json; charset=utf-8');
-
-        let formData = new FormData(formBottom);
-
-        let obj = {};
-        formData.forEach(function(value, key) {
-            obj[key] = value;
-        });
-
-        let json = JSON.stringify(obj);
-
-        request.send(json);
-
-        request.addEventListener('readystatechange', function() {
-            if (request.readyState <4) {
-                statusMessage.innerHTML = message.loading;
-            } else if(request.readyState === 4 && request.status == 200) {
-                statusMessage.innerHTML = message.success;
-            } else {
-                statusMessage.innerHTML = message.failure;
+    dotsWrap.addEventListener('click', function(event) {
+        for (let i = 0; i < dots.length +1; i++) {
+            if (event.target.classList.contains('dot') && event.target == dots[i-1]) {
+                currentSlide(i);
             }
-        }); 
-
-        for (let i = 0; i < inputsFormBottom.length; i++) {
-            inputsFormBottom[i].value = '';
         }
     });
 
